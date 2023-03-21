@@ -1,0 +1,225 @@
+napravim novi projekat sa 3.9 interpreterom venv
+sam napravim direktorijume authentication,store i tests i u njih pazljivo
+kopiram fajlove
+
+pozicioniram se u svaki od njih i odradim pip install -r requirements.txt
+
+napravim image(pazim da ne zaboravim neki)
+
+
+kako radim:
+obrisem stack
+proverim da nema kontejnera i volume
+deploy stack
+sacekam neko vreme
+runujem testove[IZUZETNO VAZNO PROVERITI DA LI SU SVI PARAMI ZA MAIN.PY DOBRI]
+
+
+komande:
+docker stack rm stack
+
+// pozicionirati se u project
+docker stack deploy --compose-file stack.yaml stack
+
+// pokretanje testova
+python main.py --type all --with-authentication --authentication-address http://127.0.0.1:5001 --jwt-secret JWT_SECRET_KEY --roles-field roles --administrator-role admin --customer-role buyer --warehouse-role worker --customer-address http://127.0.0.1:5003 --warehouse-address http://127.0.0.1:5002 --administrator-address http://127.0.0.1:5004
+
+// resetovanje sistema
+- volume obrisati sa: docker volume prune (yes)
+- za ponovno pokretanje uraditi ponovo deploy
+
+// pristup redisu
+docker exec -it v4_redis_1 bash; redis-cli
+
+// pristup kontejeneru
+docker network/volume inspect ime_n/v 
+docker attach ime_kont
+
+
+
+// docker komande sa vezbi
+POKRETANJE SISTEMA:
+
+- sve konfiguracije nazvane i tagovane sa image_servis npr image_authentication
+- pokrenuti sve .dockerfiles fajlove
+
+PS C:\WINDOWS\system32> cd ~/bin
+
+PS C:\Users\Korisnik\bin> .\docker-machine.exe create managerServer --virtualbox-no-vtx-check
+PS C:\Users\Korisnik\bin> .\docker-machine.exe create workerServer0 --virtualbox-no-vtx-check
+PS C:\Users\Korisnik\bin> .\docker-machine.exe create workerServer1 --virtualbox-no-vtx-check
+
+PS C:\Users\Korisnik\bin> .\docker-machine.exe ls
+//zapisati ip adrese 192.168.99.103 104 105 u ovom slucaju
+
+106-109
+
+
+PS C:\Users\Korisnik\bin> .\docker-machine.exe ssh managerServer
+
+docker@managerServer:~$ docker swarm init --advertise-addr 192.168.99.103
+
+// rezultat je komanda docker swarm join --token SWMTKN-1-3e63io0wkegvwspeodi8lpr6o8fk7qpxgq5nrurlxh4ieljm91-70diq79tvrygt8szmyxzlhfcp 192.168.99.103:2377
+// pokrenuti je na worker-ima
+// dodati ip manager-a sa portom 5000 pod navodnicima u insecure-registries u docker desktop-u
+
+{
+  "builder": {
+    "gc": {
+      "defaultKeepStorage": "20GB",
+      "enabled": true
+    }
+  },
+  "experimental": false,
+  "features": {
+    "buildkit": true
+  },
+  "insecure-registries": [
+    "192.168.99.106:5000"
+  ]
+}
+
+// izmena i na manager-u
+
+docker@managerServer:~$ sudo su
+root@managerServer:/home/docker# cd /var/lib/boot2docker
+root@managerServer:/var/lib/boot2docker# vi profile
+
+EXTRA_ARGS='
+--label provider=virtualbox
+--insecure-registry 192.168.99.106:5000
+'
+
+esc pa :wq pa enter
+
+root@managerServer:/var/lib/boot2docker# exit
+docker@managerServer:~$ exit
+
+
+PS C:\Users\Korisnik\bin> .\docker-machine.exe restart managerServer
+
+PS C:\Users\Korisnik\bin> .\docker-machine.exe ip managerServer
+// u slucaju da se promijenila adresa
+
+docker@managerServer:~$ docker node ls
+// provjera klastera
+
+docker@managerServer:~$ docker service create --name registry --replicas 1 --publish 5000:5000 registry:2
+
+http://192.168.99.106:5000/v2/_catalog // URL za repozitorijume
+
+192.168.99.106:5000 --MANAGER ADRESS
+
+PS C:\Users\Korisnik\bin> docker tag image_worker 192.168.99.106:5000/image_worker
+PS C:\Users\Korisnik\bin> docker tag image_storedbmigration 192.168.99.106:5000/image_storedbmigration
+PS C:\Users\Korisnik\bin> docker tag image_daemon 192.168.99.106:5000/image_daemon
+PS C:\Users\Korisnik\bin> docker tag image_buyer 192.168.99.106:5000/image_buyer
+PS C:\Users\Korisnik\bin> docker tag image_authenticationdbmigration 192.168.99.106:5000/image_authenticationdbmigration
+PS C:\Users\Korisnik\bin> docker tag image_authentication 192.168.99.106:5000/image_authentication
+PS C:\Users\Korisnik\bin> docker tag image_admin 192.168.99.106:5000/image_admin
+
+PS C:\Users\Korisnik\bin> docker push 192.168.99.106:5000/image_worker
+PS C:\Users\Korisnik\bin> docker push 192.168.99.106:5000/image_storedbmigration
+PS C:\Users\Korisnik\bin> docker push 192.168.99.106:5000/image_daemon
+PS C:\Users\Korisnik\bin> docker push 192.168.99.106:5000/image_buyer
+PS C:\Users\Korisnik\bin> docker push 192.168.99.106:5000/image_authenticationdbmigration
+PS C:\Users\Korisnik\bin> docker push 192.168.99.106:5000/image_authentication
+PS C:\Users\Korisnik\bin> docker push 192.168.99.106:5000/image_admin
+
+docker@managerServer:~$ docker pull 192.168.99.106:5000/image_worker
+docker@managerServer:~$ docker pull 192.168.99.106:5000/image_storedbmigration
+docker@managerServer:~$ docker pull 192.168.99.106:5000/image_daemon
+docker@managerServer:~$ docker pull 192.168.99.106:5000/image_buyer
+docker@managerServer:~$ docker pull 192.168.99.106:5000/image_authenticationdbmigration
+docker@managerServer:~$ docker pull 192.168.99.106:5000/image_authentication
+docker@managerServer:~$ docker pull 192.168.99.106:5000/image_admin
+
+docker@managerServer:~$ docker tag 192.168.99.106:5000/image_worker image_worker
+docker@managerServer:~$ docker tag 192.168.99.106:5000/image_storedbmigration image_storedbmigration
+docker@managerServer:~$ docker tag 192.168.99.106:5000/image_daemon image_daemon
+docker@managerServer:~$ docker tag 192.168.99.106:5000/image_buyer image_buyer
+docker@managerServer:~$ docker tag 192.168.99.106:5000/image_authenticationdbmigration image_authenticationdbmigration
+docker@managerServer:~$ docker tag 192.168.99.106:5000/image_authentication image_authentication
+docker@managerServer:~$ docker tag 192.168.99.106:5000/image_admin image_admin
+
+
+docker@managerServer:~$  cp /c/Users/Korisnik/Desktop/project/stack.yaml stack.yaml
+docker@managerServer:~$ cat stack.yaml
+
+
+docker@managerServer:~$ docker stack deploy --compose-file stack.yaml stack
+
+
+---------------------------------------------------------------------------------------
+
+
+AZURIRANJE SISTEMA:
+
+// uklanjanje kontejnera
+
+docker@managerServer:~$ docker service rm registry
+docker@managerServer:~$ docker service rm authentication_stack_adminer
+docker@managerServer:~$ docker service rm authentication_stack_authentication
+docker@managerServer:~$ docker service rm authentication_stack_authenticationDB
+docker@managerServer:~$ docker service rm authentication_stack_authenticationDBMigration
+docker@managerServer:~$ docker service rm authentication_stack_buyer
+docker@managerServer:~$ docker service rm authentication_stack_daemon
+docker@managerServer:~$ docker service rm authentication_stack_redis
+docker@managerServer:~$ docker service rm authentication_stack_storeDB
+docker@managerServer:~$ docker service rm authentication_stack_storeDBMigration
+docker@managerServer:~$ docker service rm authentication_stack_worker
+
+// uklanjanje image-a
+
+docker@managerServer:~$ docker image rm 192.168.99.106:5000/image_worker
+docker@managerServer:~$ docker image rm image_worker
+
+
+docker@managerServer:~$ docker image rm 192.168.99.106:5000/image_storedbmigration
+docker@managerServer:~$ docker image rm image_storedbmigration
+
+docker@managerServer:~$ docker image rm 192.168.99.106:5000/image_daemon 
+docker@managerServer:~$ docker image rm image_daemon 
+
+docker@managerServer:~$ docker image rm 192.168.99.106:5000/image_buyer 
+docker@managerServer:~$ docker image rm image_buyer 
+
+docker@managerServer:~$ docker image rm 192.168.99.106:5000/image_authenticationdbmigration 
+docker@managerServer:~$ docker image rm image_authenticationdbmigration 
+
+docker@managerServer:~$ docker image rm 192.168.99.106:5000/image_authentication 
+docker@managerServer:~$ docker image rm image_authentication 
+
+docker@managerServer:~$ docker image rm 192.168.99.106:5000/image_admin 
+docker@managerServer:~$ docker image rm image_admin 
+
+// ponovo pusovati i pulovati image i pokrenuti compose fajl
+docker@managerServer:~$ docker service create --name registry --replicas 1 --publish 5000:5000 registry:2
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

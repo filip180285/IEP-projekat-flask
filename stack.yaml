@@ -1,0 +1,109 @@
+version: '3'
+
+services:
+  adminer:
+    image: adminer
+    ports:
+      - 8080:8080
+    networks:
+      - network_authentication
+      - network_store
+
+  authenticationDB:
+    image: mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+    volumes:
+      - authenticationdbdata:/var/lib/mysql
+    networks:
+      - network_authentication
+
+  authenticationDBMigration:
+    image: image_authenticationdbmigration
+    environment:
+      - DATABASE_URL=authenticationDB
+    networks:
+      - network_authentication
+
+  authentication:
+    image: image_authentication
+    environment:
+      - DATABASE_URL=authenticationDB
+    ports:
+      - 5001:5001
+    networks:
+      - network_authentication
+
+  redis:
+    image: redis
+    ports:
+      - 6379:6379
+    networks:
+      - network_redis
+
+  worker:
+    image: image_worker
+    environment:
+      - DATABASE_URL=storeDB
+    ports:
+      - 5002:5002
+    networks:
+      - network_redis
+    deploy:
+      replicas: 3
+
+  storeDB:
+    image: mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+    volumes:
+      - storedbdata:/var/lib/mysql
+    networks:
+      - network_store
+
+  storeDBMigration:
+    image: image_storedbmigration
+    environment:
+      - DATABASE_URL=storeDB
+    networks:
+      - network_store
+
+  daemon:
+    image: image_daemon
+    environment:
+      - DATABASE_URL=storeDB
+    networks:
+      - network_redis
+      - network_store
+
+  buyer:
+    image: image_buyer
+    environment:
+      - DATABASE_URL=storeDB
+    ports:
+      - 5003:5003
+    networks:
+      - network_store
+    deploy:
+      replicas: 3
+
+  admin:
+    image: image_admin
+    environment:
+      - DATABASE_URL=storeDB
+    ports:
+      - 5004:5004
+    networks:
+      - network_store
+
+volumes:
+  authenticationdbdata:
+  storedbdata:
+
+networks:
+  network_authentication:
+    driver: overlay
+  network_store:
+    driver: overlay
+  network_redis:
+    driver: overlay
